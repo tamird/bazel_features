@@ -1,11 +1,13 @@
 """Internal functions to parse versions."""
 
 def _safe_int(s, v):
+    # type: (str, str) -> int
     if not s.isdigit():
         fail("invalid Bazel version '{}': non-numeric segment '{}'".format(v, s))
     return int(s)
 
 def _partition(s):
+    # type: (str) -> tuple[str, str]
     for i in range(len(s)):
         c = s[i]
         if c == "-":
@@ -15,6 +17,7 @@ def _partition(s):
     return s, ""
 
 def _parse_prerelease(prerelease):
+    # type: (str) -> list[tuple[int, int | str]]
     # Parses a SemVer prerelease string into a list of comparable identifiers, following the
     # precedence rules at https://semver.org/#spec-item-11.
     if not prerelease:
@@ -28,6 +31,7 @@ def _parse_prerelease(prerelease):
     return identifiers
 
 def parse_version(v):
+    # type: (str) -> tuple[list[int], bool, list[tuple[int, int | str]]]
     """Parses the given Bazel version string into a comparable value.
 
     Args:
