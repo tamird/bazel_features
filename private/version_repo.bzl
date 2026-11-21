@@ -1,6 +1,16 @@
 """Contains the internal repository rule version_repo."""
 
+# Environment variables that toggle incompatible changes tracked as features.
+INCOMPATIBLE_ENV_VARS = [
+    # If enabled, the toolchain types in @bazel_tools are aliases of the types
+    # in rules_cc, rules_java and rules_python.
+    "BAZEL_INCOMPATIBLE_TOOLCHAIN_TYPES_IN_RULES",
+]
+
+# TODO(https://github.com/bazelbuild/bazel/issues/32020): Use a native repository context
+# annotation when supported Bazel versions expose it.
 def _version_repo_impl(rctx):
+    # type: (repository_ctx) -> repo_metadata | None
     rctx.file(
         "BUILD.bazel",
         """
@@ -15,13 +25,24 @@ bzl_library(
 )
 """,
     )
-    rctx.file("version.bzl", "version = '" + native.bazel_version + "'")
+    incompatible_env = {
+        name: rctx.os.environ[name]
+        for name in INCOMPATIBLE_ENV_VARS
+        if name in rctx.os.environ
+    }
+    rctx.file("version.bzl", "\n".join([
+        "version = '" + native.bazel_version + "'",
+        "# type: dict[str, str]",
+        "incompatible_env = " + repr(incompatible_env),
+    ]))
     if hasattr(rctx, "repo_metadata"):
         return rctx.repo_metadata(reproducible = False)
     return None
 
 version_repo = repository_rule(
     _version_repo_impl,
+    # Rerun when an incompatible change is toggled with --repo_env.
+    environ = INCOMPATIBLE_ENV_VARS,
     # Force reruns on server restarts to keep native.bazel_version up-to-date.
     local = True,
 )
